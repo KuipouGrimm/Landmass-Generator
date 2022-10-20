@@ -54,8 +54,8 @@ public class EndlessTerrain : MonoBehaviour
         int currentChunkCoordX = Mathf.RoundToInt(viewerPosition.x / chunckSize);
         int currentChunkCoordY = Mathf.RoundToInt(viewerPosition.y / chunckSize);
 
-        for (int yOffset = -chuncksVisibleInViewDst; yOffset < chuncksVisibleInViewDst; yOffset++) {
-            for (int xOffset = -chuncksVisibleInViewDst; xOffset < chuncksVisibleInViewDst; xOffset++) {
+        for (int yOffset = -chuncksVisibleInViewDst; yOffset <= chuncksVisibleInViewDst; yOffset++) {
+            for (int xOffset = -chuncksVisibleInViewDst; xOffset <= chuncksVisibleInViewDst; xOffset++) {
                 Vector2 viewedChunkCoord = new Vector2(currentChunkCoordX + xOffset, currentChunkCoordY + yOffset);
 
                 if (terrainChunkDictionary.ContainsKey(viewedChunkCoord)) {
