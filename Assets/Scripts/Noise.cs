@@ -19,7 +19,8 @@ public static class Noise {
         Vector2 offset,
         NormalizeMode normalizeMode,
         float globalNormalizeModeOffset,
-        float testNormalizeModeOffset
+        float testNormalizeModeIntensity,
+        float testNormalizeModePeaks
     ) {
         float[,] noiseMap = new float[mapWidth, mapHeight];
 
@@ -94,10 +95,14 @@ public static class Noise {
             }
         }
         else if (normalizeMode == NormalizeMode.Test) {
-            float intensity = testNormalizeModeOffset;
+            float intensity = testNormalizeModeIntensity;
+            float peakness = testNormalizeModePeaks;
             for (int y = 0; y < mapHeight; y++) {
                 for (int x = 0;  x < mapWidth; x++) {
-                    noiseMap[x,y] = 1 - (1 / (1 + Mathf.Exp(noiseMap[x,y] * intensity)));
+                    float normalizedHeightMap = (1 + peakness) / (1 + Mathf.Exp((noiseMap[x,y] * -1) * intensity));
+                    float flipThenAbsThenUnflip = 1 - Mathf.Abs(1 - normalizedHeightMap);
+
+                    noiseMap[x,y] = flipThenAbsThenUnflip;
                 }
             }
         }

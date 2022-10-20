@@ -21,7 +21,8 @@ public class MapGenerator : MonoBehaviour
     [Min(1)] public float lacunarity;
 
     [Range(0.1f,10)] public float globalNormalizeModeOffset;
-    [Range(0.1f,10)] public float testNormalizeModeOffset;
+    [Range(0.1f,10)] public float testIntensity;
+    [Range(-0.5f,0.5f)] public float testPeaks;
 
     public int seed;
     public Vector2 offset;
@@ -112,7 +113,8 @@ public class MapGenerator : MonoBehaviour
             center + offset,
             normalizeMode,
             globalNormalizeModeOffset,
-            testNormalizeModeOffset
+            testIntensity,
+            testPeaks
         );
 
         Color[] colourMap = new Color[mapChunckSize * mapChunckSize];   
