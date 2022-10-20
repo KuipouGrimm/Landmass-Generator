@@ -33,7 +33,7 @@ public static class Noise {
 
         for (int i = 0; i < octaves; i++) {
             float offsetX = prng.Next(-100000, 100000) + offset.x;
-            float offsetY = prng.Next(-100000, 100000) - offset.y;
+            float offsetY = prng.Next(-100000, 100000) + offset.y;
             octaveOffsets[i] = new Vector2(offsetX, offsetY);
 
             maxPossibleHeight += amplitude;
@@ -78,6 +78,11 @@ public static class Noise {
                 }
 
                 noiseMap[x,y] = noiseHeight;
+
+                if (normalizeMode == NormalizeMode.Global) {
+                    float normalizedHeight = (noiseMap[x,y] + 1) / (2f * maxPossibleHeight / globalNormalizeModeOffset);
+                    noiseMap[x,y] = Mathf.Clamp(normalizedHeight, 0f, int.MaxValue);
+                }
             }
         }
         
@@ -88,15 +93,7 @@ public static class Noise {
                 }
             }
         }
-        else if (normalizeMode == NormalizeMode.Global) {
-            for (int y = 0; y < mapHeight; y++) {
-                for (int x = 0;  x < mapWidth; x++) {
-                    float normalizedHeight = (noiseMap[x,y] + 1) / (2f * maxPossibleHeight / globalNormalizeModeOffset);
-                    noiseMap[x,y] = Mathf.Clamp(normalizedHeight, 0f, int.MaxValue);
-                }
-            }
-        }
-        else {
+        else if (normalizeMode == NormalizeMode.Test) {
             float intensity = testNormalizeModeOffset;
             for (int y = 0; y < mapHeight; y++) {
                 for (int x = 0;  x < mapWidth; x++) {

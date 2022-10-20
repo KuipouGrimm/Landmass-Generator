@@ -7,7 +7,7 @@ public class EndlessTerrain : MonoBehaviour
     const float viewerMoveTresholdForChunkUpdate = 25f;
     const float sqrViewerMoveTresholdForChunkUpdate = viewerMoveTresholdForChunkUpdate * viewerMoveTresholdForChunkUpdate;
 
-    public static float maxViewDist = 450;
+    public static float maxViewDist;
     public LODInfo[] detailLevels;
 
     public Transform viewer;
