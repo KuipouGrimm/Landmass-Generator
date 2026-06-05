@@ -29,6 +29,10 @@ public class EndlessTerrain : MonoBehaviour
     void Start() {
         mapGenerator = FindFirstObjectByType<MapGenerator>();
 
+        if (viewer == null && Camera.main != null) {
+            viewer = Camera.main.transform;
+        }
+
         maxViewDist = detailLevels[detailLevels.Length - 1].visibleDstThreshold;
 
         chunckSize = MapGenerator.mapChunckSize - 1;
