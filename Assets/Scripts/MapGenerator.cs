@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-using System.Threading;
 
 public class MapGenerator : MonoBehaviour
 {
@@ -34,13 +33,15 @@ public class MapGenerator : MonoBehaviour
 
     public TerrainTypes[] regions;
 
-    Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
-    Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>(); 
+    Queue<MapDataRequest> mapDataRequestQueue = new Queue<MapDataRequest>();
+    Queue<MeshDataRequest> meshDataRequestQueue = new Queue<MeshDataRequest>();
+    bool isProcessingMapData;
+    bool isProcessingMeshData;
 
     public void DrawMapInEditor() {
         MapData mapData = GenerateMapData(Vector2.zero);
 
-        MapDisplay display = FindObjectOfType<MapDisplay>();
+        MapDisplay display = FindFirstObjectByType<MapDisplay>();
 
         if (drawMode == DrawMode.NoiseMap) {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
@@ -57,48 +58,50 @@ public class MapGenerator : MonoBehaviour
     }
 
     public void RequestMapData(Vector2 center, Action<MapData> callback) {
-        ThreadStart threadStart = delegate {
-            MapDataThread(center, callback);
-        };
+        mapDataRequestQueue.Enqueue(new MapDataRequest(center, callback));
 
-        new Thread(threadStart).Start();
-    }
-
-    void MapDataThread(Vector2 center, Action<MapData> callback){
-        MapData mapData = GenerateMapData(center);
-        lock (mapDataThreadInfoQueue) {
-            mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));   
+        if (!isProcessingMapData) {
+            StartCoroutine(ProcessMapDataQueue());
         }
     }
 
     public void RequestMeshData(MapData mapData, int lod, Action<MeshData> callback) {
-        ThreadStart threadStart = delegate {
-            MeshDataThread(mapData, lod, callback);
-        };
+        meshDataRequestQueue.Enqueue(new MeshDataRequest(mapData, lod, callback));
 
-        new Thread(threadStart).Start();
-    }
-
-    void MeshDataThread(MapData mapData, int lod, Action<MeshData> callback) {
-        MeshData meshData = MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, lod);
-        lock(meshDataThreadInfoQueue) {
-            meshDataThreadInfoQueue.Enqueue(new MapThreadInfo<MeshData>(callback, meshData));
+        if (!isProcessingMeshData) {
+            StartCoroutine(ProcessMeshDataQueue());
         }
     }
 
-    void Update() {
-        if (mapDataThreadInfoQueue.Count > 0) {
-            for (int i = 0; i < mapDataThreadInfoQueue.Count; i++) {
-                MapThreadInfo<MapData> threadInfo = mapDataThreadInfoQueue.Dequeue();
-                threadInfo.callback(threadInfo.parameter);
-            }
+    IEnumerator ProcessMapDataQueue() {
+        isProcessingMapData = true;
+
+        while (mapDataRequestQueue.Count > 0) {
+            MapDataRequest request = mapDataRequestQueue.Dequeue();
+            MapData mapData = GenerateMapData(request.center);
+            request.callback(mapData);
+            yield return null;
         }
-        if (meshDataThreadInfoQueue.Count > 0) {
-            for (int i = 0; i < meshDataThreadInfoQueue.Count; i++) {
-                MapThreadInfo<MeshData> threadInfo = meshDataThreadInfoQueue.Dequeue();
-                threadInfo.callback(threadInfo.parameter);
-            }
+
+        isProcessingMapData = false;
+    }
+
+    IEnumerator ProcessMeshDataQueue() {
+        isProcessingMeshData = true;
+
+        while (meshDataRequestQueue.Count > 0) {
+            MeshDataRequest request = meshDataRequestQueue.Dequeue();
+            MeshData meshData = MeshGenerator.GenerateTerrainMesh(
+                request.mapData.heightMap,
+                meshHeightMultiplier,
+                meshHeightCurve,
+                request.lod
+            );
+            request.callback(meshData);
+            yield return null;
         }
+
+        isProcessingMeshData = false;
     }
 
     MapData GenerateMapData(Vector2 center) {
@@ -147,13 +150,25 @@ public class MapGenerator : MonoBehaviour
     }
     */
 
-    struct MapThreadInfo<T> {
-        public readonly Action<T> callback;
-        public readonly T parameter;
+    struct MapDataRequest {
+        public readonly Vector2 center;
+        public readonly Action<MapData> callback;
 
-        public MapThreadInfo (Action<T> callback, T parameter) {
+        public MapDataRequest(Vector2 center, Action<MapData> callback) {
+            this.center = center;
             this.callback = callback;
-            this.parameter = parameter;
+        }
+    }
+
+    struct MeshDataRequest {
+        public readonly MapData mapData;
+        public readonly int lod;
+        public readonly Action<MeshData> callback;
+
+        public MeshDataRequest(MapData mapData, int lod, Action<MeshData> callback) {
+            this.mapData = mapData;
+            this.lod = lod;
+            this.callback = callback;
         }
     }
 

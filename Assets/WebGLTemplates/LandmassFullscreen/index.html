@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width={{{ WIDTH }}} height={{{ HEIGHT }}} tabindex="-1"></canvas>
+
+      <div id="loading-screen">
+        <div class="spiral-loader" aria-hidden="true">
+          <div class="spiral-particle" style="--i: 0"></div>
+          <div class="spiral-particle" style="--i: 1"></div>
+          <div class="spiral-particle" style="--i: 2"></div>
+          <div class="spiral-particle" style="--i: 3"></div>
+          <div class="spiral-particle" style="--i: 4"></div>
+          <div class="spiral-particle" style="--i: 5"></div>
+          <div class="spiral-particle" style="--i: 6"></div>
+          <div class="spiral-particle" style="--i: 7"></div>
+          <div class="spiral-particle" style="--i: 8"></div>
+          <div class="spiral-particle" style="--i: 9"></div>
+          <div class="spiral-particle" style="--i: 10"></div>
+          <div class="spiral-particle" style="--i: 11"></div>
+        </div>
+
+        <p class="loading-label">Carregando</p>
+
+        <div class="progress-bar-track">
+          <div id="progress-bar-fill"></div>
+        </div>
+        <p id="progress-text">0%</p>
+      </div>
+
+      <div id="unity-warning"></div>
+    </div>
+
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingScreen = document.querySelector("#loading-screen");
+      var progressBarFill = document.querySelector("#progress-bar-fill");
+      var progressText = document.querySelector("#progress-text");
+
+      function resizeGame() {
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+      }
+
+      window.addEventListener("resize", resizeGame);
+      resizeGame();
+
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? "block" : "none";
+        }
+
+        var div = document.createElement("div");
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+
+        if (type === "error") {
+          div.className = "banner-error";
+        } else if (type === "warning") {
+          div.className = "banner-warning";
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+
+        updateBannerVisibility();
+      }
+
+      function setLoadingProgress(progress) {
+        var percent = Math.round(progress * 100);
+        progressBarFill.style.width = percent + "%";
+        progressText.textContent = percent + "%";
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+        frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+        workerUrl: buildUrl + "/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+        codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        showBanner: unityShowBanner,
+      };
+
+#if BACKGROUND_FILENAME
+      canvas.style.background = "url('" + buildUrl + "/{{{ BACKGROUND_FILENAME.replace(/'/g, '%27') }}}') center / cover";
+#endif
+
+      setLoadingProgress(0);
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = function() {
+        createUnityInstance(canvas, config, function(progress) {
+          setLoadingProgress(progress);
+        }).then(function() {
+          loadingScreen.classList.add("hidden");
+        }).catch(function(message) {
+          progressText.textContent = "Erro ao carregar";
+          alert(message);
+        });
+      };
+
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
