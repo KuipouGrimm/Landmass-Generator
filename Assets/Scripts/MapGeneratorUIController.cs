@@ -18,6 +18,8 @@ using UnityEngine.UI;
 ///   SetGlobalNormalizeModeOffset(float) -> Slider
 ///   SetTestIntensity(float)       -> Slider
 ///   SetTestPeaks(float)           -> Slider
+///   SetTerrainElevation(float)    -> Slider (-0.4 a 0.4; negativo = mais oceano, positivo = mais terra)
+///   SetTerrainRelief(float)       -> Slider (0.1-3; contraste picos/vales, 1 = neutro)
 ///   SetSeed(int)                  -> InputField (int) via SetSeedFromString(string)
 ///   RandomizeSeed()               -> Button
 ///   SetOffsetX(float) / SetOffsetY(float) -> Slider ou InputField
@@ -45,6 +47,9 @@ using UnityEngine.UI;
 ///   ToggleUI()                    -> Button opcional (Esc também alterna)
 ///
 /// meshHeightCurve: sem binding — editar só no Inspector.
+///
+/// Valores iniciais da UI: arraste widgets em "Ui Sync" e o Start chama SyncUIFromInspector()
+/// (lê MapGenerator / EndlessTerrain do Inspector, sem disparar regen).
 /// </summary>
 public class MapGeneratorUIController : MonoBehaviour
 {
@@ -55,6 +60,7 @@ public class MapGeneratorUIController : MonoBehaviour
     [SerializeField] TMP_InputField seedInputField;
     [SerializeField] Toggle autoUpdateToggle;
     [SerializeField] Button generateButton;
+    [SerializeField] MapGeneratorUISync uiSync;
 
     Coroutine debouncedRegenerateCoroutine;
 
@@ -71,22 +77,108 @@ public class MapGeneratorUIController : MonoBehaviour
 
     void Start()
     {
+        SyncUIFromInspector();
         SetUIOpen(true);
-
-        seedInputField.onValueChanged.AddListener(SetSeedFromString);
-        generateButton.onClick.AddListener(OnGenerateClicked);
-        autoUpdateToggle.onValueChanged.AddListener((bool value) => {
-            OnAutoUpdateChanged(value);
-            generateButton.interactable = !value;
-        });
-        generateButton.interactable = !autoUpdateToggle.isOn;
-        RandomizeSeed();
+        BindUIEvents();
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.C)) {
             ToggleUI();
+        }
+    }
+
+    void BindUIEvents()
+    {
+        if (seedInputField != null) {
+            seedInputField.onValueChanged.AddListener(SetSeedFromString);
+        }
+
+        if (generateButton != null) {
+            generateButton.onClick.AddListener(OnGenerateClicked);
+        }
+
+        if (autoUpdateToggle != null) {
+            autoUpdateToggle.onValueChanged.AddListener(OnAutoUpdateToggleChanged);
+        }
+
+        if (generateButton != null && autoUpdateToggle != null) {
+            generateButton.interactable = !autoUpdateToggle.isOn;
+        }
+    }
+
+    void OnAutoUpdateToggleChanged(bool value)
+    {
+        OnAutoUpdateChanged(value);
+
+        if (generateButton != null) {
+            generateButton.interactable = !value;
+        }
+    }
+
+    public void SyncUIFromInspector()
+    {
+        if (mapGenerator == null) {
+            return;
+        }
+
+        SetDropdownValue(uiSync.drawMode, GetDrawMode());
+        SetDropdownValue(uiSync.normalizeMode, GetNormalizeMode());
+        SetSliderValue(uiSync.editorPreviewLOD, GetEditorPreviewLOD());
+        SetSliderValue(uiSync.noiseScale, GetNoiseScale());
+        SetSliderValue(uiSync.octaves, GetOctaves());
+        SetSliderValue(uiSync.persistance, GetPersistance());
+        SetSliderValue(uiSync.lacunarity, GetLacunarity());
+        SetSliderValue(uiSync.globalNormalizeModeOffset, GetGlobalNormalizeModeOffset());
+        SetSliderValue(uiSync.testIntensity, GetTestIntensity());
+        SetSliderValue(uiSync.testPeaks, GetTestPeaks());
+        SetSliderValue(uiSync.terrainElevation, GetTerrainElevation());
+        SetSliderValue(uiSync.terrainRelief, GetTerrainRelief());
+        SetSliderValue(uiSync.meshHeightMultiplier, GetMeshHeightMultiplier());
+        SetSliderValue(uiSync.offsetX, GetOffsetX());
+        SetSliderValue(uiSync.offsetY, GetOffsetY());
+
+        SyncSliderArray(uiSync.regionHeights, GetRegionCount(), GetRegionHeight);
+        SyncSliderArray(uiSync.detailLevelLods, GetDetailLevelCount(), GetDetailLevelLod);
+        SyncSliderArray(uiSync.detailLevelVisibleDsts, GetDetailLevelCount(), GetDetailLevelVisibleDst);
+
+        if (seedInputField != null) {
+            seedInputField.SetTextWithoutNotify(GetSeed().ToString());
+        }
+
+        if (autoUpdateToggle != null) {
+            autoUpdateToggle.SetIsOnWithoutNotify(GetAutoUpdate());
+        }
+
+        if (generateButton != null) {
+            generateButton.interactable = !GetAutoUpdate();
+        }
+    }
+
+    static void SetSliderValue(Slider slider, float value)
+    {
+        if (slider != null) {
+            slider.SetValueWithoutNotify(value);
+        }
+    }
+
+    static void SetDropdownValue(Dropdown dropdown, int value)
+    {
+        if (dropdown != null) {
+            dropdown.SetValueWithoutNotify(value);
+            dropdown.RefreshShownValue();
+        }
+    }
+
+    static void SyncSliderArray(Slider[] sliders, int count, System.Func<int, float> getValue)
+    {
+        if (sliders == null) {
+            return;
+        }
+
+        for (int i = 0; i < sliders.Length && i < count; i++) {
+            SetSliderValue(sliders[i], getValue(i));
         }
     }
 
@@ -131,7 +223,10 @@ public class MapGeneratorUIController : MonoBehaviour
         if (mapGenerator.autoUpdate) {
             ScheduleRegenerate();
         }
-        seedInputField.placeholder.GetComponent<TMP_Text>().text = mapGenerator.seed.ToString();
+
+        if (seedInputField != null) {
+            seedInputField.SetTextWithoutNotify(mapGenerator.seed.ToString());
+        }
     }
 
     void ScheduleRegenerate()
@@ -162,6 +257,8 @@ public class MapGeneratorUIController : MonoBehaviour
     public float GetGlobalNormalizeModeOffset() => mapGenerator.globalNormalizeModeOffset;
     public float GetTestIntensity() => mapGenerator.testIntensity;
     public float GetTestPeaks() => mapGenerator.testPeaks;
+    public float GetTerrainElevation() => mapGenerator.terrainElevation;
+    public float GetTerrainRelief() => mapGenerator.terrainRelief;
     public int GetSeed() => mapGenerator.seed;
     public float GetOffsetX() => mapGenerator.offset.x;
     public float GetOffsetY() => mapGenerator.offset.y;
@@ -255,6 +352,18 @@ public class MapGeneratorUIController : MonoBehaviour
     public void SetTestPeaks(float value)
     {
         mapGenerator.testPeaks = Mathf.Clamp(value, -0.5f, 0.5f);
+        OnSettingChanged();
+    }
+
+    public void SetTerrainElevation(float value)
+    {
+        mapGenerator.terrainElevation = Mathf.Clamp(value, -0.4f, 0.4f);
+        OnSettingChanged();
+    }
+
+    public void SetTerrainRelief(float value)
+    {
+        mapGenerator.terrainRelief = Mathf.Clamp(value, 0.1f, 3f);
         OnSettingChanged();
     }
 
@@ -373,4 +482,27 @@ public class MapGeneratorUIController : MonoBehaviour
             && index >= 0
             && index < endlessTerrain.detailLevels.Length;
     }
+}
+
+[System.Serializable]
+public class MapGeneratorUISync
+{
+    public Dropdown drawMode;
+    public Dropdown normalizeMode;
+    public Slider editorPreviewLOD;
+    public Slider noiseScale;
+    public Slider octaves;
+    public Slider persistance;
+    public Slider lacunarity;
+    public Slider globalNormalizeModeOffset;
+    public Slider testIntensity;
+    public Slider testPeaks;
+    public Slider terrainElevation;
+    public Slider terrainRelief;
+    public Slider meshHeightMultiplier;
+    public Slider offsetX;
+    public Slider offsetY;
+    public Slider[] regionHeights;
+    public Slider[] detailLevelLods;
+    public Slider[] detailLevelVisibleDsts;
 }

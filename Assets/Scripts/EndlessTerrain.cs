@@ -30,6 +30,7 @@ public class EndlessTerrain : MonoBehaviour
 
     void Start() {
         mapGenerator = FindFirstObjectByType<MapGenerator>();
+        mapGenerator.seed = Random.Range(int.MinValue, int.MaxValue);
 
         if (viewer == null && Camera.main != null) {
             viewer = Camera.main.transform;
@@ -182,7 +183,15 @@ public class EndlessTerrain : MonoBehaviour
 
         void ApplyChunkMesh(Mesh mesh) {
             meshFilter.sharedMesh = mesh;
-            meshCollider.sharedMesh = mesh;
+
+            if (mesh != null && mesh.triangles != null && mesh.triangles.Length >= 3) {
+                meshCollider.sharedMesh = mesh;
+                meshCollider.enabled = true;
+            }
+            else {
+                meshCollider.sharedMesh = null;
+                meshCollider.enabled = false;
+            }
         }
 
         public void SetVisible(bool visible) {

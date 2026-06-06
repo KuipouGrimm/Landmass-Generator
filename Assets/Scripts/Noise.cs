@@ -20,7 +20,9 @@ public static class Noise {
         NormalizeMode normalizeMode,
         float globalNormalizeModeOffset,
         float testNormalizeModeIntensity,
-        float testNormalizeModePeaks
+        float testNormalizeModePeaks,
+        float terrainElevation,
+        float terrainRelief
     ) {
         float[,] noiseMap = new float[mapWidth, mapHeight];
 
@@ -82,15 +84,18 @@ public static class Noise {
 
                 if (normalizeMode == NormalizeMode.Global) {
                     float normalizedHeight = (noiseMap[x,y] + 1) / (2f * maxPossibleHeight / globalNormalizeModeOffset);
-                    noiseMap[x,y] = Mathf.Clamp(normalizedHeight, 0f, int.MaxValue);
+                    noiseMap[x,y] = ApplyHeightShaping(Mathf.Clamp01(normalizedHeight), terrainElevation, terrainRelief);
                 }
             }
         }
         
         if (normalizeMode == NormalizeMode.Local) {
+            // Usa limites teóricos globais em vez de min/max por chunk, para que bordas
+            // vizinhas compartilhem os mesmos valores de altura no mundo infinito.
             for (int y = 0; y < mapHeight; y++) {
-                for (int x = 0;  x < mapWidth; x++) {
-                    noiseMap[x,y] = Mathf.InverseLerp (minLocalNoiseHeight, maxLocalNoiseHeight, noiseMap[x,y]);
+                for (int x = 0; x < mapWidth; x++) {
+                    float normalizedHeight = Mathf.InverseLerp(-maxPossibleHeight, maxPossibleHeight, noiseMap[x, y]);
+                    noiseMap[x, y] = ApplyHeightShaping(normalizedHeight, terrainElevation, terrainRelief);
                 }
             }
         }
@@ -102,11 +107,20 @@ public static class Noise {
                     float normalizedHeightMap = (1 + peakness) / (1 + Mathf.Exp((noiseMap[x,y] * -1) * intensity));
                     float flipThenAbsThenUnflip = 1 - Mathf.Abs(1 - normalizedHeightMap);
 
-                    noiseMap[x,y] = flipThenAbsThenUnflip;
+                    noiseMap[x,y] = ApplyHeightShaping(flipThenAbsThenUnflip, terrainElevation, terrainRelief);
                 }
             }
         }
 
         return noiseMap;
+    }
+
+    // elevation: desloca o terreno inteiro (mais oceano < 0 < mais terra).
+    // relief: contraste em torno de 0.5 (picos/vales sem mudar o nível médio quando elevation = 0).
+    static float ApplyHeightShaping(float normalizedHeight, float elevation, float relief) {
+        float height = Mathf.Clamp01(normalizedHeight);
+        height = 0.5f + (height - 0.5f) * relief;
+        height += elevation;
+        return Mathf.Clamp01(height);
     }
 }

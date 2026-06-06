@@ -23,6 +23,9 @@ public class MapGenerator : MonoBehaviour
     [Range(0.1f,10)] public float testIntensity;
     [Range(-0.5f,0.5f)] public float testPeaks;
 
+    [Range(-0.4f, 0.4f)] public float terrainElevation;
+    [Range(0.1f, 3f)] public float terrainRelief = 1.4f;
+
     public int seed;
     public Vector2 offset;
 
@@ -117,7 +120,9 @@ public class MapGenerator : MonoBehaviour
             normalizeMode,
             globalNormalizeModeOffset,
             testIntensity,
-            testPeaks
+            testPeaks,
+            terrainElevation,
+            terrainRelief
         );
 
         Color[] colourMap = new Color[mapChunckSize * mapChunckSize];   
