@@ -2,7 +2,7 @@ using System;
 
 public static class PlayerInputGate
 {
-    static bool uiOpen;
+    static bool uiOpen = true;
 
     public static bool IsUIOpen => uiOpen;
     public static bool CameraControlsEnabled => !uiOpen;

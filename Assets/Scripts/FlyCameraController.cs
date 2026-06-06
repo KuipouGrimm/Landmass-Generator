@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Camera))]
 public class FlyCameraController : MonoBehaviour
 {
@@ -9,9 +10,15 @@ public class FlyCameraController : MonoBehaviour
     [SerializeField] float minPitch = -89f;
     [SerializeField] float maxPitch = 89f;
 
+    CharacterController characterController;
     float pitch;
     float yaw;
     bool cursorLocked;
+
+    void Awake()
+    {
+        characterController = GetComponent<CharacterController>();
+    }
 
     void OnEnable()
     {
@@ -59,10 +66,6 @@ public class FlyCameraController : MonoBehaviour
         if (!cursorLocked && Input.GetMouseButtonDown(0)) {
             LockCursor();
         }
-
-        if (cursorLocked && Input.GetKeyDown(KeyCode.Escape)) {
-            UnlockCursor();
-        }
     }
 
     void HandleLook()
@@ -107,8 +110,8 @@ public class FlyCameraController : MonoBehaviour
             vertical -= 1f;
         }
 
-        transform.position += horizontal * moveSpeed * Time.deltaTime;
-        transform.position += Vector3.up * vertical * verticalSpeed * Time.deltaTime;
+        Vector3 move = horizontal * moveSpeed + Vector3.up * vertical * verticalSpeed;
+        characterController.Move(move * Time.deltaTime);
     }
 
     void LockCursor()
