@@ -82,22 +82,25 @@ public class FlyCameraController : MonoBehaviour
 
     void HandleMove()
     {
+        Quaternion yawRotation = Quaternion.Euler(0f, yaw, 0f);
+        Vector3 flatForward = yawRotation * Vector3.forward;
+        Vector3 flatRight = yawRotation * Vector3.right;
+
         Vector3 horizontal = Vector3.zero;
 
         if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) {
-            horizontal += transform.forward;
+            horizontal += flatForward;
         }
         if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) {
-            horizontal -= transform.forward;
+            horizontal -= flatForward;
         }
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) {
-            horizontal += transform.right;
+            horizontal += flatRight;
         }
         if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) {
-            horizontal -= transform.right;
+            horizontal -= flatRight;
         }
 
-        horizontal.y = 0f;
         if (horizontal.sqrMagnitude > 1f) {
             horizontal.Normalize();
         }

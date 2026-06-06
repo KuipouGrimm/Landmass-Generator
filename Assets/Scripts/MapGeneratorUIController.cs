@@ -80,7 +80,7 @@ public class MapGeneratorUIController : MonoBehaviour
             generateButton.interactable = !value;
         });
         generateButton.interactable = !autoUpdateToggle.isOn;
-        seedInputField.placeholder.GetComponent<TMP_Text>().text = mapGenerator.seed.ToString();
+        RandomizeSeed();
     }
 
     void Update()
